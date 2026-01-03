@@ -22,8 +22,7 @@ jobs:
         run: npm install
 
       - name: Run extractor
-      - run: node extract_officers.js
-
+        run: node extract_officers.js
 
       - name: Commit updated output.json
         run: |
