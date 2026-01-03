@@ -1,7 +1,6 @@
 {
   "name": "shadow-nexus-extractor",
   "version": "1.0.0",
-  "description": "Data extraction pipeline for Shadow Nexus Discord bot",
   "type": "module",
   "scripts": {
     "extract": "node extract_officers.js"
