@@ -1,17 +1,48 @@
 import fs from "fs";
 
-const API_URL = "https://stfc.space/api/officers";
+const GRAPHQL_URL = "https://stfc.space/graphql";
 
 async function run() {
   try {
-    console.log("Fetching officer data from STFC.space API...");
+    console.log("Fetching officer data from STFC.space GraphQL API...");
 
-    const res = await fetch(API_URL);
+    const query = `
+      query {
+        officers {
+          id
+          name
+          group
+          rarity
+          portrait
+          captain_ability
+          officer_ability
+          stats {
+            health
+            attack
+            defense
+          }
+          traits
+        }
+      }
+    `;
+
+    const res = await fetch(GRAPHQL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query })
+    });
+
     if (!res.ok) {
-      throw new Error(`Failed to fetch API: ${res.status}`);
+      throw new Error(`GraphQL request failed: ${res.status}`);
     }
 
-    const officers = await res.json();
+    const json = await res.json();
+
+    if (!json.data || !json.data.officers) {
+      throw new Error("GraphQL response missing officer data");
+    }
+
+    const officers = json.data.officers;
 
     console.log(`Received ${officers.length} officers.`);
 
