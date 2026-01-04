@@ -1,9 +1,12 @@
 {
   "name": "shadow-nexus-extractor",
   "version": "1.0.0",
-  "type": "module",
+  "main": "extract_officers.js",
   "scripts": {
-    "start": "node extract_officers.js"
+    "start": "node extract_officers.js",
+    "postinstall": "playwright install chromium"
   },
-  "dependencies": {}
+  "dependencies": {
+    "playwright": "^1.57.0"
+  }
 }
