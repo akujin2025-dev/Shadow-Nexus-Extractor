@@ -1,48 +1,17 @@
 import fs from "fs";
 
-const GRAPHQL_URL = "https://stfc.space/graphql";
+const URL = "https://stfc.space/assets/data/officers.json";
 
 async function run() {
   try {
-    console.log("Fetching officer data from STFC.space GraphQL API...");
+    console.log("Fetching officer data from STFC.space static JSON...");
 
-    const query = `
-      query {
-        officers {
-          id
-          name
-          group
-          rarity
-          portrait
-          captain_ability
-          officer_ability
-          stats {
-            health
-            attack
-            defense
-          }
-          traits
-        }
-      }
-    `;
-
-    const res = await fetch(GRAPHQL_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query })
-    });
-
+    const res = await fetch(URL);
     if (!res.ok) {
-      throw new Error(`GraphQL request failed: ${res.status}`);
+      throw new Error(`Failed to fetch JSON: ${res.status}`);
     }
 
-    const json = await res.json();
-
-    if (!json.data || !json.data.officers) {
-      throw new Error("GraphQL response missing officer data");
-    }
-
-    const officers = json.data.officers;
+    const officers = await res.json();
 
     console.log(`Received ${officers.length} officers.`);
 
