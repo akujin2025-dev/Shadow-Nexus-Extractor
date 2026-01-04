@@ -2,10 +2,6 @@
   "name": "shadow-nexus-extractor",
   "version": "1.0.0",
   "type": "module",
-  "main": "extract_officers.js",
-  "scripts": {
-    "start": "node extract_officers.js"
-  },
   "dependencies": {
     "cheerio": "^1.0.0",
     "node-fetch": "^3.3.2"
