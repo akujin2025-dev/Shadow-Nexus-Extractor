@@ -35,12 +35,16 @@ async function run() {
   // Wait for React to mount
   await page.waitForTimeout(2000);
 
-  // Scroll to trigger lazy-loaded officer list
-  await page.evaluate(() => {
-    window.scrollTo(0, document.body.scrollHeight);
-  });
+  // Click the "All Officers" filter to trigger the API call
+  try {
+    await page.click('button:has-text("All Officers")', { timeout: 5000 });
+    console.log("Clicked All Officers filter.");
+  } catch {
+    console.log("Filter button not found, trying alternative selector…");
+    await page.click('text=All', { timeout: 5000 });
+  }
 
-  // Give time for the API call to fire
+  // Wait for the API call to fire
   await page.waitForTimeout(4000);
 
   await browser.close();
