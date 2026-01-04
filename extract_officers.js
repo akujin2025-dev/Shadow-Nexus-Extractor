@@ -66,10 +66,10 @@ async function run() {
       await new Promise(r => setTimeout(r, 500)); // polite delay
     }
 
-    fs.writeFileSync(
-      "/data/officers.json",
-      JSON.stringify({ officers: all }, null, 2)
-    );
+fs.writeFileSync(
+  "/data/officers.json",
+  JSON.stringify(all, null, 2)
+);
 
     console.log(`Saved ${all.length} officers to /data/officers.json`);
   } catch (err) {
