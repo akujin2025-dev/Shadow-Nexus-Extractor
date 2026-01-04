@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "extract": "node extract_officers.js"
+    "start": "node extract_officers.js"
   },
   "dependencies": {}
 }
