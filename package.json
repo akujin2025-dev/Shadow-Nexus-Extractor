@@ -1,0 +1,11 @@
+{
+  "name": "shadow-nexus-extractor",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node extract_officers.js"
+  },
+  "dependencies": {
+    "playwright": "^1.57.0"
+  }
+}
