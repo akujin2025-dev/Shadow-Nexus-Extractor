@@ -11,21 +11,6 @@ async function run() {
 
   const page = await browser.newPage();
 
-  let officerData = null;
-
-  // Capture internal API call
-  page.on("response", async (response) => {
-    const url = response.url();
-    if (url.includes("/api/officers")) {
-      try {
-        officerData = await response.json();
-        console.log("Captured officer JSON from internal API.");
-      } catch (err) {
-        console.error("Failed to parse officer JSON:", err);
-      }
-    }
-  });
-
   console.log("Navigating to STFC.space officers page…");
   await page.goto("https://stfc.space/officers/", {
     waitUntil: "domcontentloaded",
@@ -35,28 +20,69 @@ async function run() {
   // Wait for React to mount
   await page.waitForTimeout(2000);
 
-  // Click the "All Officers" filter to trigger the API call
-  try {
-    await page.click('button:has-text("All Officers")', { timeout: 5000 });
-    console.log("Clicked All Officers filter.");
-  } catch {
-    console.log("Filter button not found, trying alternative selector…");
-    await page.click('text=All', { timeout: 5000 });
-  }
+  let allOfficers = [];
+  let currentPage = 1;
 
-  // Wait for the API call to fire
-  await page.waitForTimeout(4000);
+  while (true) {
+    console.log(`Scraping page ${currentPage}…`);
+
+    // Wait for officer rows to appear
+    await page.waitForSelector(".stfc-table-result__row", { timeout: 15000 });
+
+    // Extract officers from DOM
+    const officers = await page.$$eval(".stfc-table-result__row", rows =>
+      rows.map(row => {
+        const link = row.querySelector("a.stfc-table-row-link");
+        const href = link?.getAttribute("href") || "";
+        const id = href.split("/").pop();
+
+        const img = row.querySelector("img");
+        const image = img?.src || null;
+
+        const name = row.querySelector("component.font-bold")?.textContent?.trim() || null;
+
+        const raritySpan = row.querySelector("span[aria-label]");
+        const rarity = raritySpan?.getAttribute("aria-label") || null;
+
+        const crew = row.querySelector("p component")?.textContent?.trim() || null;
+
+        return { id, name, rarity, crew, image };
+      })
+    );
+
+    allOfficers.push(...officers);
+
+    console.log(`Collected ${officers.length} officers from page ${currentPage}.`);
+
+    // Try to click "Next" button
+    const nextButton = await page.$('a[aria-label="Next"], a:has-text("Next")');
+
+    if (!nextButton) {
+      console.log("No Next button found. Pagination complete.");
+      break;
+    }
+
+    const disabled = await nextButton.getAttribute("class");
+    if (disabled?.includes("cursor-not-allowed") || disabled?.includes("disabled")) {
+      console.log("Next button disabled. Reached final page.");
+      break;
+    }
+
+    await nextButton.click();
+    currentPage++;
+
+    // Wait for new page to load
+    await page.waitForTimeout(2000);
+  }
 
   await browser.close();
 
-  if (!officerData) {
-    console.error("Failed to capture officer data.");
-    process.exit(1);
-  }
+  console.log(`Total officers collected: ${allOfficers.length}`);
 
+  // Write to Railway volume
   fs.writeFileSync(
     "/data/officers.json",
-    JSON.stringify({ officers: officerData }, null, 2)
+    JSON.stringify({ officers: allOfficers }, null, 2)
   );
 
   console.log("Extraction complete. Saved to /data/officers.json");
