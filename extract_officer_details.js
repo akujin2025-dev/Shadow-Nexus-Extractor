@@ -75,13 +75,10 @@ async function run() {
   const details = [];
 
   for (const officer of officers) {
-    const url = officer.url || officer.link || officer.href;
-    if (!url) {
-      console.warn("Officer missing URL field, skipping:", officer);
-      continue;
-    }
+    // ⭐ URL FIX — build full URL from officer.path
+    const url = `https://stfc.space${officer.path}`;
 
-    console.log(`Fetching details for ${officer.name || officer.id}`);
+    console.log(`Fetching details for ${officer.name} (${officer.id})`);
 
     try {
       // --- SPA‑SAFE NAVIGATION ---
