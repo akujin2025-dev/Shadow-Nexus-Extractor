@@ -15,7 +15,7 @@ async function run() {
 
     console.log(`Received ${officers.length} officers.`);
 
-    fs.writeFileSync("output.json", JSON.stringify(officers, null, 2));
+    ffs.writeFileSync("/data/officers.json", JSON.stringify({ officers }, null, 2));
 
     console.log("Extraction complete. Saved to output.json");
   } catch (err) {
