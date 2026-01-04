@@ -13,6 +13,7 @@ async function run() {
 
   let officerData = null;
 
+  // Capture internal API call
   page.on("response", async (response) => {
     const url = response.url();
     if (url.includes("/api/officers")) {
@@ -27,11 +28,20 @@ async function run() {
 
   console.log("Navigating to STFC.space officers page…");
   await page.goto("https://stfc.space/officers/", {
-    waitUntil: "networkidle",
+    waitUntil: "domcontentloaded",
     timeout: 60000
   });
 
-  await page.waitForTimeout(3000);
+  // Wait for React to mount
+  await page.waitForTimeout(2000);
+
+  // Scroll to trigger lazy-loaded officer list
+  await page.evaluate(() => {
+    window.scrollTo(0, document.body.scrollHeight);
+  });
+
+  // Give time for the API call to fire
+  await page.waitForTimeout(4000);
 
   await browser.close();
 
