@@ -1,91 +1,75 @@
 import fs from "fs";
-import { chromium } from "playwright";
+import fetch from "node-fetch";
+import cheerio from "cheerio";
+
+const BASE = "https://stfc.space/officers?page=";
+
+async function scrapePage(pageNum) {
+  const url = `${BASE}${pageNum}`;
+  console.log(`Scraping page ${pageNum}…`);
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to load page ${pageNum}`);
+
+  const html = await res.text();
+  const $ = cheerio.load(html);
+
+  const rows = $(".stfc-table-result__row");
+  if (rows.length === 0) return null; // no more pages
+
+  const officers = [];
+
+  rows.each((i, el) => {
+    const row = $(el);
+
+    const link = row.find("a.stfc-table-row-link").attr("href") || "";
+    const id = link.split("/").pop();
+
+    const name = row.find("component.font-bold").text().trim();
+    const crew = row.find("p component").text().trim();
+
+    const rarityEl = row.find("span[aria-label]");
+    const rarity = rarityEl.attr("aria-label") || "Unknown";
+
+    const img = row.find("img").attr("src") || null;
+
+    officers.push({
+      id,
+      name,
+      crew,
+      rarity,
+      image: img
+    });
+  });
+
+  console.log(`Collected ${officers.length} officers from page ${pageNum}.`);
+  return officers;
+}
 
 async function run() {
-  console.log("Launching headless browser…");
+  try {
+    let page = 1;
+    let all = [];
 
-  const browser = await chromium.launch({
-    headless: true,
-    args: ["--no-sandbox"]
-  });
+    while (true) {
+      const data = await scrapePage(page);
+      if (!data) break;
+      all = all.concat(data);
+      page++;
+    }
 
-  const page = await browser.newPage();
+    console.log(`Total officers collected: ${all.length}`);
 
-  console.log("Navigating to STFC.space officers page…");
-  await page.goto("https://stfc.space/officers/", {
-    waitUntil: "domcontentloaded",
-    timeout: 60000
-  });
-
-  // Wait for React to mount
-  await page.waitForTimeout(2000);
-
-  let allOfficers = [];
-  let currentPage = 1;
-
-  while (true) {
-    console.log(`Scraping page ${currentPage}…`);
-
-    // Wait for officer rows to appear
-    await page.waitForSelector(".stfc-table-result__row", { timeout: 15000 });
-
-    // Extract officers from DOM
-    const officers = await page.$$eval(".stfc-table-result__row", rows =>
-      rows.map(row => {
-        const link = row.querySelector("a.stfc-table-row-link");
-        const href = link?.getAttribute("href") || "";
-        const id = href.split("/").pop();
-
-        const img = row.querySelector("img");
-        const image = img?.src || null;
-
-        const name = row.querySelector("component.font-bold")?.textContent?.trim() || null;
-
-        const raritySpan = row.querySelector("span[aria-label]");
-        const rarity = raritySpan?.getAttribute("aria-label") || null;
-
-        const crew = row.querySelector("p component")?.textContent?.trim() || null;
-
-        return { id, name, rarity, crew, image };
-      })
+    fs.writeFileSync(
+      "/data/officers.json",
+      JSON.stringify({ officers: all }, null, 2)
     );
 
-    allOfficers.push(...officers);
-
-    console.log(`Collected ${officers.length} officers from page ${currentPage}.`);
-
-    // Try to click "Next" button
-    const nextButton = await page.$('a[aria-label="Next"], a:has-text("Next")');
-
-    if (!nextButton) {
-      console.log("No Next button found. Pagination complete.");
-      break;
-    }
-
-    const disabled = await nextButton.getAttribute("class");
-    if (disabled?.includes("cursor-not-allowed") || disabled?.includes("disabled")) {
-      console.log("Next button disabled. Reached final page.");
-      break;
-    }
-
-    await nextButton.click();
-    currentPage++;
-
-    // Wait for new page to load
-    await page.waitForTimeout(2000);
+    console.log("Saved to /data/officers.json");
+  } catch (err) {
+    console.error("Extractor failed:", err);
+    process.exit(1);
   }
-
-  await browser.close();
-
-  console.log(`Total officers collected: ${allOfficers.length}`);
-
-  // Write to Railway volume
-  fs.writeFileSync(
-    "/data/officers.json",
-    JSON.stringify({ officers: allOfficers }, null, 2)
-  );
-
-  console.log("Extraction complete. Saved to /data/officers.json");
 }
 
 run();
