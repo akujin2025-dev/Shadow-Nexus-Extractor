@@ -1,22 +1,20 @@
 import fs from "fs";
-import fetch from "node-fetch";
-import cheerio from "cheerio";
+import * as cheerio from "cheerio";
 
-const BASE_URL = "https://stfc.space/officers?page=";
-const OUTPUT_PATH = "/data/officers.json";
+const BASE = "https://stfc.space/officers?page=";
 
-async function scrapePage(pageNumber) {
-  const url = `${BASE_URL}${pageNumber}`;
-  console.log(`Scraping page ${pageNumber}…`);
+async function fetchPage(page) {
+  const url = `${BASE}${page}`;
+  console.log(`Fetching page ${page}: ${url}`);
 
   const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch page ${pageNumber}: ${res.status}`);
-  }
+  if (!res.ok) throw new Error(`Failed to fetch page ${page}`);
 
   const html = await res.text();
-  const $ = cheerio.load(html);
+  return cheerio.load(html);
+}
 
+function parseOfficers($) {
   const officers = [];
 
   $("li.stfc-table-result__row").each((_, el) => {
@@ -26,47 +24,54 @@ async function scrapePage(pageNumber) {
     const id = link.split("/").pop();
 
     const name = row.find("component.font-bold").text().trim();
+    const group = row.find("p component").text().trim();
 
-    const rarity =
-      row.find("span[aria-label]").attr("aria-label")?.trim() || "Unknown";
-
-    const crew = row.find("p component").text().trim();
+    const rarityEl = row.find("span[aria-label]");
+    const rarity = rarityEl.attr("aria-label") || "";
 
     const img = row.find("img").attr("src") || "";
 
     officers.push({
       id,
       name,
+      group,
       rarity,
-      crew,
       image: img
     });
   });
 
-  console.log(`Collected ${officers.length} officers from page ${pageNumber}.`);
   return officers;
 }
 
 async function run() {
   try {
-    console.log("Starting STFC officer extraction…");
+    console.log("Starting Cheerio extractor…");
 
-    const allOfficers = [];
+    let all = [];
+    let page = 1;
 
-    // STFC.space has 14 pages of officers
-    for (let page = 1; page <= 14; page++) {
-      const officers = await scrapePage(page);
-      allOfficers.push(...officers);
+    while (true) {
+      const $ = await fetchPage(page);
+      const officers = parseOfficers($);
+
+      if (officers.length === 0) {
+        console.log(`No officers found on page ${page}. Stopping.`);
+        break;
+      }
+
+      console.log(`Collected ${officers.length} officers from page ${page}.`);
+      all = all.concat(officers);
+
+      page++;
+      await new Promise(r => setTimeout(r, 500)); // polite delay
     }
 
-    console.log(`Total officers collected: ${allOfficers.length}`);
-
     fs.writeFileSync(
-      OUTPUT_PATH,
-      JSON.stringify({ officers: allOfficers }, null, 2)
+      "/data/officers.json",
+      JSON.stringify({ officers: all }, null, 2)
     );
 
-    console.log(`Extraction complete. Saved to ${OUTPUT_PATH}`);
+    console.log(`Saved ${all.length} officers to /data/officers.json`);
   } catch (err) {
     console.error("Extractor failed:", err);
     process.exit(1);
