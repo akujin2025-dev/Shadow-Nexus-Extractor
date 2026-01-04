@@ -15,9 +15,9 @@ async function run() {
 
     console.log(`Received ${officers.length} officers.`);
 
-    ffs.writeFileSync("/data/officers.json", JSON.stringify({ officers }, null, 2));
+    fs.writeFileSync("/data/officers.json", JSON.stringify({ officers }, null, 2));
 
-    console.log("Extraction complete. Saved to output.json");
+    console.log("Extraction complete. Saved to /data/officers.json");
   } catch (err) {
     console.error("Extractor failed:", err);
     process.exit(1);
