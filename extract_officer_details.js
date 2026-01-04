@@ -69,8 +69,27 @@ async function run() {
     return;
   }
 
-  const browser = await chromium.launch();
+  // ⭐ HEADLESS FIX + ANTI-BOT FLAGS
+  const browser = await chromium.launch({
+    headless: false,
+    args: [
+      "--disable-blink-features=AutomationControlled",
+      "--disable-web-security",
+      "--disable-features=IsolateOrigins,site-per-process",
+      "--no-sandbox",
+      "--disable-setuid-sandbox"
+    ]
+  });
+
   const page = await browser.newPage();
+
+  // ⭐ Realistic browser fingerprint
+  await page.setUserAgent(
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+  );
+
+  await page.setViewportSize({ width: 1280, height: 900 });
 
   const details = [];
 
@@ -88,6 +107,9 @@ async function run() {
       });
 
       await ensureAppLoaded(page);
+
+      // ⭐ Allow hydration to complete
+      await page.waitForTimeout(2000);
 
       // Wait for officer name to appear
       await page.waitForSelector("h1", { timeout: 60000 });
