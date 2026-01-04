@@ -1,15 +1,15 @@
-// extract_officer_details.js
-const { chromium } = require('playwright');
-const fs = require('fs/promises');
-const path = require('path');
+import { chromium } from "playwright";
+import fs from "fs/promises";
+import path from "path";
 
-const DATA_DIR = process.env.DATA_PATH || '/data';
-const OFFICERS_LIST_PATH = path.join(DATA_DIR, 'officers.json');
-const OFFICER_DETAILS_PATH = path.join(DATA_DIR, 'officer_details.json');
+const DATA_DIR = "/data";
+const OFFICERS_LIST_PATH = path.join(DATA_DIR, "officers.json");
+const OFFICER_DETAILS_PATH = path.join(DATA_DIR, "officer_details.json");
 
+// Load officers.json
 async function loadOfficerList() {
   try {
-    const raw = await fs.readFile(OFFICERS_LIST_PATH, 'utf8');
+    const raw = await fs.readFile(OFFICERS_LIST_PATH, "utf8");
     const parsed = JSON.parse(raw);
 
     if (!Array.isArray(parsed)) {
@@ -25,12 +25,13 @@ async function loadOfficerList() {
   }
 }
 
+// Save officer_details.json
 async function saveOfficerDetails(details) {
   try {
     await fs.writeFile(
       OFFICER_DETAILS_PATH,
       JSON.stringify(details, null, 2),
-      'utf8'
+      "utf8"
     );
     console.log(`Saved ${details.length} officer details to ${OFFICER_DETAILS_PATH}`);
   } catch (err) {
@@ -38,30 +39,33 @@ async function saveOfficerDetails(details) {
   }
 }
 
-// Helper: handle the “stuck here, press Reload” shell
+// Detect & fix the PWA fallback shell
 async function ensureAppLoaded(page) {
-  // Wait for network to settle a bit
-  await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
+  await page.waitForLoadState("networkidle").catch(() => {});
 
-  const stuckText = page.locator('text=If you are stuck here, press the Reload Button');
-  const isStuck = await stuckText.first().isVisible().catch(() => false);
+  const stuck = await page
+    .locator('text=If you are stuck here')
+    .first()
+    .isVisible()
+    .catch(() => false);
 
-  if (isStuck) {
-    console.log('Detected service-worker shell. Clicking Reload button…');
+  if (stuck) {
+    console.log("Detected PWA fallback shell. Clicking Reload…");
+
     const reloadButton = page.locator('button:has-text("Reload")');
     if (await reloadButton.first().isVisible().catch(() => false)) {
       await reloadButton.first().click();
-      await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
+      await page.waitForLoadState("networkidle").catch(() => {});
     }
   }
 }
 
 async function run() {
-  console.log('Starting Playwright officer detail extractor…');
+  console.log("Starting Playwright officer detail extractor…");
 
   const officers = await loadOfficerList();
   if (!officers.length) {
-    console.log('No officers in list. Exiting.');
+    console.log("No officers in list. Exiting.");
     return;
   }
 
@@ -73,63 +77,77 @@ async function run() {
   for (const officer of officers) {
     const url = officer.url || officer.link || officer.href;
     if (!url) {
-      console.warn('Officer missing URL field, skipping:', officer);
+      console.warn("Officer missing URL field, skipping:", officer);
       continue;
     }
 
-    console.log(`Fetching details for ${officer.name || officer.id || 'Unknown'} (${officer.id || 'no-id'})`);
+    console.log(`Fetching details for ${officer.name || officer.id}`);
 
     try {
-      // --- NAVIGATION BLOCK (this is the part we’re “replacing”) ---
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      // --- SPA‑SAFE NAVIGATION ---
+      await page.goto(url, {
+        waitUntil: "domcontentloaded",
+        timeout: 60000,
+      });
+
       await ensureAppLoaded(page);
 
-      // Wait for the real officer page to render.
-      // If your previous extractor used a different selector than 'h1',
-      // you can swap it here.
-      await page.waitForSelector('h1', { timeout: 60000 });
+      // Wait for officer name to appear
+      await page.waitForSelector("h1", { timeout: 60000 });
 
-      // --- SCRAPING BLOCK (adjust selectors as needed) ---
-      const name = (await page.locator('h1').first().textContent().catch(() => '')).trim();
+      // --- SCRAPE FIELDS ---
+      const name = (
+        await page.locator("h1").first().textContent().catch(() => "")
+      ).trim();
 
-      const rarity = (await page
-        .locator('text=Rarity')
-        .locator('xpath=following-sibling::*[1]')
-        .first()
-        .textContent()
-        .catch(() => '')).trim();
+      const rarity = (
+        await page
+          .locator("text=Rarity")
+          .locator("xpath=following-sibling::*[1]")
+          .first()
+          .textContent()
+          .catch(() => "")
+      ).trim();
 
-      const group = (await page
-        .locator('text=Group')
-        .locator('xpath=following-sibling::*[1]')
-        .first()
-        .textContent()
-        .catch(() => '')).trim();
+      const group = (
+        await page
+          .locator("text=Group")
+          .locator("xpath=following-sibling::*[1]")
+          .first()
+          .textContent()
+          .catch(() => "")
+      ).trim();
 
-      const officerClass = (await page
-        .locator('text=Class')
-        .locator('xpath=following-sibling::*[1]')
-        .first()
-        .textContent()
-        .catch(() => '')).trim();
+      const officerClass = (
+        await page
+          .locator("text=Class")
+          .locator("xpath=following-sibling::*[1]")
+          .first()
+          .textContent()
+          .catch(() => "")
+      ).trim();
 
-      const captainAbility = (await page
-        .locator('text=Captain Maneuver')
-        .locator('xpath=following-sibling::*[1]')
-        .first()
-        .textContent()
-        .catch(() => '')).trim();
+      const captainAbility = (
+        await page
+          .locator("text=Captain Maneuver")
+          .locator("xpath=following-sibling::*[1]")
+          .first()
+          .textContent()
+          .catch(() => "")
+      ).trim();
 
-      const officerAbility = (await page
-        .locator('text=Officer Ability')
-        .locator('xpath=following-sibling::*[1]')
-        .first()
-        .textContent()
-        .catch(() => '')).trim();
+      const officerAbility = (
+        await page
+          .locator("text=Officer Ability")
+          .locator("xpath=following-sibling::*[1]")
+          .first()
+          .textContent()
+          .catch(() => "")
+      ).trim();
 
       const traits = await page
-        .locator('text=Traits')
-        .locator('xpath=following-sibling::*[1] li')
+        .locator("text=Traits")
+        .locator("xpath=following-sibling::*[1] li")
         .allTextContents()
         .catch(() => []);
 
@@ -154,6 +172,6 @@ async function run() {
 }
 
 run().catch((err) => {
-  console.error('Detail extractor crashed:', err);
+  console.error("Detail extractor crashed:", err);
   process.exit(1);
 });
