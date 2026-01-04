@@ -2,7 +2,9 @@
   "name": "stfc-extractor",
   "version": "1.0.0",
   "type": "module",
-  "main": "extract_officers.js",
+  "scripts": {
+    "start": "node run_all.js"
+  },
   "dependencies": {
     "cheerio": "^1.0.0-rc.12"
   }
