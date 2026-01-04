@@ -6,6 +6,7 @@
     "start": "node run_all.js"
   },
   "dependencies": {
+    "playwright": "^1.44.0",
     "cheerio": "^1.0.0-rc.12"
   }
 }
