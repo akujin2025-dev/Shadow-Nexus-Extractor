@@ -1,14 +1,14 @@
 import fs from "fs";
 
-const URL = "https://stfc.space/assets/data/officers.json";
+const URL = "https://stfc.pro/api/officers";
 
 async function run() {
   try {
-    console.log("Fetching officer data from STFC.space static JSON...");
+    console.log("Fetching officer data from STFC.pro...");
 
     const res = await fetch(URL);
     if (!res.ok) {
-      throw new Error(`Failed to fetch JSON: ${res.status}`);
+      throw new Error(`Failed to fetch API: ${res.status}`);
     }
 
     const officers = await res.json();
