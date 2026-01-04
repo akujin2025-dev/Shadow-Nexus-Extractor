@@ -1,10 +1,10 @@
 import fs from "fs";
 
-const URL = "https://stfc.pro/api/officers.json";
+const URL = "https://stfcapi.com/api/officers";
 
 async function run() {
   try {
-    console.log("Fetching officer data from STFC.space...");
+    console.log("Fetching officer data from STFCAPI.com...");
 
     const res = await fetch(URL);
     if (!res.ok) {
@@ -15,8 +15,11 @@ async function run() {
 
     console.log(`Received ${officers.length} officers.`);
 
-    // WRITE TO RAILWAY VOLUME
-    fs.writeFileSync("/data/officers.json", JSON.stringify({ officers }, null, 2));
+    // Write to Railway volume
+    fs.writeFileSync(
+      "/data/officers.json",
+      JSON.stringify({ officers }, null, 2)
+    );
 
     console.log("Extraction complete. Saved to /data/officers.json");
   } catch (err) {
