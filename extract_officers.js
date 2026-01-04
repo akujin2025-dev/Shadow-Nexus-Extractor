@@ -1,6 +1,6 @@
 import fs from "fs";
 
-const URL = "https://stfc.space/api/officers";
+const URL = "https://stfc.pro/api/officers.json";
 
 async function run() {
   try {
